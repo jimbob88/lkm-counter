@@ -13,6 +13,8 @@ static int major;
 
 static atomic_t device_status = ATOMIC_INIT(DEVICE_FREE);
 
+static atomic_t counter = ATOMIC_INIT(0);
+
 static char msg[BUF_LEN + 1];
 
 static struct class *cls;
@@ -63,8 +65,16 @@ static ssize_t on_write(struct file *file, const char __user *buffer, size_t len
 }
 
 static int on_open(struct inode *inode, struct file *file) {
-  pr_alert("Not implemented on open!\n");
-  return -1;
+  if (atomic_cmpxchg(&device_status, DEVICE_FREE, DEVICE_BOUND)) {
+    pr_debug("Device already bound, busy, failed to open!\n");
+    return -EBUSY;
+  }
+
+  atomic_inc(&counter);
+  sprintf(msg, "I have been read %d times", atomic_read(&counter));
+  try_module_get(THIS_MODULE);
+
+  return 0;
 }
 
 static int on_release(struct inode *inode, struct file *file) {
