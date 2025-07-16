@@ -56,8 +56,20 @@ static void __exit counter_exit(void) {
 }
 
 static ssize_t on_read(struct file *file, char __user *buffer, size_t length, loff_t *offset) {
-  pr_alert("Not implemented on read!\n");
-  return -1;
+  size_t length_of_msg = strlen(msg);
+
+  if (*offset >= length_of_msg) {
+    return 0;
+  }
+
+  if (copy_to_user(buffer, msg, length_of_msg)) {
+    // Failed to copy the entire message to the buffer.
+    return -EFAULT;
+  }
+
+  *offset += length_of_msg;
+
+  return length_of_msg;
 }
 
 static ssize_t on_write(struct file *file, const char __user *buffer, size_t length, loff_t *offset) {
@@ -72,8 +84,8 @@ static int on_open(struct inode *inode, struct file *file) {
   }
 
   atomic_inc(&counter);
-  sprintf(msg, "I have been read %d times", atomic_read(&counter));
-  pr_info("%s\n", msg);
+  sprintf(msg, "I have been read %d times.\n", atomic_read(&counter));
+  pr_info("%s", msg);
 
   return 0;
 }
