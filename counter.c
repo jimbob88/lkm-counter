@@ -1,19 +1,78 @@
 /*
- * main.c - Trivial counting kernel module.
+ * counter.c - Trivial counting kernel module.
  */
+#include <linux/atomic.h>
+#include <linux/device.h>
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/printk.h>
 
+#include "counter.h"
+
+static int major;
+
+static atomic_t device_status = ATOMIC_INIT(DEVICE_FREE);
+
+static char msg[BUF_LEN + 1];
+
+static struct class *cls;
+
+static struct file_operations counter_fops = {
+    .read = on_read,
+    .write = on_write,
+    .open = on_open,
+    .release = on_release,
+};
+
 static int __init counter_init(void) {
   pr_info("In the beginning...\n");
+
+  major = register_chrdev(0, DEVICE_NAME, &counter_fops);
+
+  if (major < 0) {
+    pr_alert("Registering device failed with %d\n", major);
+    return major;
+  }
+
+  pr_info("Counter assigned major number %d.\n", major);
+
+  cls = class_create(DEVICE_NAME);
+  device_create(cls, NULL, MKDEV(major, 0), NULL, DEVICE_NAME);
+
+  pr_info("Device created on /dev/%s\n", DEVICE_NAME);
 
   return 0;
 }
 
-static void __exit counter_exit(void) { pr_info("Amen.\n"); }
+static void __exit counter_exit(void) {
+  pr_info("Amen.\n");
+
+  device_destroy(cls, MKDEV(major, 0));
+  class_destroy(cls);
+  unregister_chrdev(major, DEVICE_NAME);
+}
+
+static ssize_t on_read(struct file *file, char __user *buffer, size_t length, loff_t *offset) {
+  pr_alert("Not implemented on read!\n");
+  return -1;
+}
+
+static ssize_t on_write(struct file *file, const char __user *buffer, size_t length, loff_t *offset) {
+  pr_alert("Not implemented on write!\n");
+  return -1;
+}
+
+static int on_open(struct inode *inode, struct file *file) {
+  pr_alert("Not implemented on open!\n");
+  return -1;
+}
+
+static int on_release(struct inode *inode, struct file *file) {
+  pr_alert("Not implemented on release!\n");
+  return -1;
+}
 
 module_init(counter_init);
 module_exit(counter_exit);
 
-MODULE_LICENSE("MIT");
+MODULE_LICENSE("GPL");
