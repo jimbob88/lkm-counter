@@ -20,6 +20,7 @@ static char msg[BUF_LEN + 1];
 static struct class *cls;
 
 static struct file_operations counter_fops = {
+    .owner = THIS_MODULE,
     .read = on_read,
     .write = on_write,
     .open = on_open,
@@ -72,14 +73,14 @@ static int on_open(struct inode *inode, struct file *file) {
 
   atomic_inc(&counter);
   sprintf(msg, "I have been read %d times", atomic_read(&counter));
-  try_module_get(THIS_MODULE);
+  pr_info("%s\n", msg);
 
   return 0;
 }
 
 static int on_release(struct inode *inode, struct file *file) {
-  pr_alert("Not implemented on release!\n");
-  return -1;
+  atomic_set(&device_status, DEVICE_FREE);
+  return 0;
 }
 
 module_init(counter_init);
